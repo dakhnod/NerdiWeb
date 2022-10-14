@@ -15,7 +15,21 @@
 
     <style>
         div.control-container {
-            gap: 10px
+            gap: 10px;
+        }
+        div.engine-display {
+            gap: 30px;
+            margin: 15px;
+        }
+        div.engine-box {
+            border-style: solid;
+            padding: 5px;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: rgba(0, 0, 0, 0.3);
+        }
+        mark.code-line {
+            background-color: greenyellow;
         }
     </style>
 
@@ -23,7 +37,7 @@
 
 <body>
 
-    <textarea id="code-text" class="form-control" style="min-height: 200px">
+    <textarea id="code-text-edit" class="form-control" style="min-height: 200px">
         start LOAD a; start label
         ADD  b   ; adding something
         STORE c  	  ; storing    back
@@ -31,13 +45,25 @@
         a DB 20
         b DB 30
     </textarea>
+
+    <span id="code-text-readonly" class="d-inline-block">
+    </span>
+
     <div class="d-flex control-container flex-wrap">
         <button id="button-run-code" class="btn btn-primary">Run code</button>
         <button id="button-run-code-step" class="btn btn-primary">Run code (step)</button>
         <button id="button-code-step" class="btn btn-primary">Next step</button>
+        <button id="button-code-stop" class="btn btn-primary">Stop execution</button>
     </div>
 
-    <span id="text-registers">
+    <div class="d-flex flex-wrap engine-display">
+        <div class="engine-box">
+            <span class="d-inline-block engine-box" id="text-registers"></span>
+        </div>
+        <div class="engine-box">
+            <span class="d-inline-block" id="text-memory"></span>
+        </div>
+    </div>
         
     </span>
 

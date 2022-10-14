@@ -5,11 +5,18 @@ const module = (function() {
     const runCodeButton = $('#button-run-code')
     const runCodeStepButton = $('#button-run-code-step')
     const codeStepButton = $('#button-code-step')
+    const codeStopButton = $('#button-code-stop')
+    const textRegisters = $('#text-registers')
+    const textMemory = $('#text-memory')
+    const textCodeEdit = $('#code-text-edit')
+    const textCodeReadOnly = $('#code-text-readonly')
     var state = 'idle'
 
     function init(){
         runCodeButton.click(handleCodeCompileAndRun)
         runCodeStepButton.click(handleCodeCompileAndRunStep)
+        codeStepButton.click(handleCodeStep)
+        codeStopButton.click(handleCodeStop)
 
         drawUI()
     }
@@ -19,20 +26,86 @@ const module = (function() {
             runCodeButton.prop('disabled', false)
             runCodeStepButton.prop('disabled', false)
             codeStepButton.prop('disabled', true)
-        }if(state == 'stepping'){
+            codeStopButton.prop('disabled', true)
+
+            textCodeEdit.show()
+            textCodeReadOnly.hide()
+        }else if(state == 'stepping'){
             runCodeButton.prop('disabled', true)
             runCodeStepButton.prop('disabled', true)
             codeStepButton.prop('disabled', false)
-        }if(state == 'running'){
+            codeStopButton.prop('disabled', false)
+
+            textCodeEdit.hide()
+            textCodeReadOnly.show()
+            displayCode()
+        }else if(state == 'running'){
             runCodeButton.prop('disabled', true)
             runCodeStepButton.prop('disabled', true)
             codeStepButton.prop('disabled', true)
+            codeStopButton.prop('disabled', true)
+
+            textCodeEdit.show()
+            textCodeReadOnly.hide()
         }
+
+        displayRegisters()
+        displayMemory()
+    }
+
+    function displayCode(){
+        const codeText = textCodeEdit.val()
+        var codeTextReadOnly = ''
+        const lines = codeText.split('\n')
+        const currentInstruction = engine.getCurrentInstruction()
+        for(var currentLine = 0; currentLine < lines.length; currentLine++){
+            const line = lines[currentLine]
+            if(currentLine == currentInstruction.lineNumber){
+                codeTextReadOnly += `<mark class="code-line">${line}</mark><br>`
+            }else{
+                codeTextReadOnly += `${line}<br>`
+            }
+        }
+        textCodeReadOnly.html(codeTextReadOnly)
+    }
+
+    function displayRegisters(){
+        const registers = engine.registers
+
+        const registerText = `PC: ${registers.programCounter}<br>Accumulator: ${registers.accumulator}<br>Carry: ${registers.carry}<br>Zero: ${registers.zero}`
+
+        textRegisters.html(registerText)
+    }
+
+    function displayMemory(){
+        const memory = engine.values
+
+        var memoryText = 'Memory<br>'
+        for(const key in memory){
+            memoryText += `<br>${key}: ${memory[key]}`
+        }
+
+        textMemory.html(memoryText)
     }
 
     function getCompiledCodeFromTextArea(){
-        const codeText = $('#code-text').val()
+        const codeText = textCodeEdit.val()
         return compileCode(codeText)
+    }
+
+    function handleCodeStep(){
+        engine.executeNextInstruction()
+        if(engine.isHalted){
+            state = 'idle'
+        }
+
+        drawUI()
+    }
+
+    function handleCodeStop(){
+        state = 'idle'
+
+        drawUI()
     }
 
     function handleCodeCompileAndRun(){
@@ -56,15 +129,19 @@ const module = (function() {
         state = 'stepping'
         const instructions = getCompiledCodeFromTextArea()
         engine.loadInstructions(instructions)
-        engine.executeNextInstruction()
+        // engine.executeNextInstruction()
+
+        if(engine.isHalted){
+            state = 'idle'
+        }
         drawUI()
     }
 
     function compileCode(codeText){
         const lines = codeText.split('\n')
         const instructions = []
-        var lineNumber = 1
-        for(var line of lines){
+        for(var lineNumber = 0; lineNumber < lines.length; lineNumber++){
+            var line = lines[lineNumber]
             line = line
                 .replace(/;.*$/, '') // remove comments
                 .replaceAll(/\t/g, ' ') // replace tabs
@@ -118,10 +195,10 @@ const module = (function() {
                 new NerdiInstruction(
                     instruction.toLowerCase(),
                     argument,
-                    label
+                    label,
+                    lineNumber
                 )
             )
-            lineNumber++
         }
 
         return instructions

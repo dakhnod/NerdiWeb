@@ -122,6 +122,10 @@ export class NerdiEngine{
 
         this.executeInstruction(nextInstruction)
     }
+
+    getCurrentInstruction = function(){
+        return this.instructions[this.registers.programCounter]
+    }
 }
 
 
@@ -129,10 +133,12 @@ export class NerdiInstruction{
     instruction = undefined
     argument = undefined
     label = undefined
+    lineNumber = undefined
 
-    constructor(instruction, argument, label){
+    constructor(instruction, argument, label, lineNumber){
         this.instruction = instruction
         this.argument = argument
         this.label = label
+        this.lineNumber = lineNumber
     }
 }
