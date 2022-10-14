@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+
+<html>
+
+<head>
+    <title>Nerdi simulator</title>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+        integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+
+    <style>
+        div.control-container {
+            gap: 10px
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <textarea id="code-text" class="form-control" style="min-height: 200px">
+        start LOAD a; start label
+        ADD  b   ; adding something
+        STORE c  	  ; storing    back
+        JMP start
+        a DB 20
+        b DB 30
+    </textarea>
+    <div class="d-flex control-container flex-wrap">
+        <button id="button-run-code" class="btn btn-primary">Run code</button>
+        <button id="button-run-code-step" class="btn btn-primary">Run code (step)</button>
+        <button id="button-code-step" class="btn btn-primary">Next step</button>
+    </div>
+
+    <span id="text-registers">
+        
+    </span>
+
+
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct"
+        crossorigin="anonymous"></script>
+
+	<script type="module" src="modules/engine.js"></script>
+    <script type="module" src="main.js"></script>
+
+</body>
+
+</html>

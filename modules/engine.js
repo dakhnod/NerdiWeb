@@ -1,17 +1,11 @@
-class NerdiEngine{
+
+export const name = 'engine'
+
+export class NerdiEngine{
     values = {}
     instructions = []
     isHalted = false
-    instructionCallbacks = {
-        halt: this.executeHaltInstruction,
-        load: this.executeLoadInstruction,
-        store: this.executeStoreInstruction,
-        add: this.executeAddInstruction,
-        sub: this.executeSubInstruction,
-        jmp: this.executeJmpInstruction,
-        jmpc: this.executeJmpCarryInstruction,
-        jmpz: this.executeJmpZeroInstruction
-    }
+
     registers = {
         programCounter: 0,
         accumulator: undefined,
@@ -20,8 +14,17 @@ class NerdiEngine{
     }
 
     loadInstructions = function(instructions) {
-        this.instructions = instructions
-        this.currentInstructionIndex = 0
+        this.registers.programCounter = 0
+        this.isHalted = false
+        this.values = {}
+        for(const instruction of instructions){
+            if(instruction.instruction == 'db'){
+                this.values[instruction.label] = instruction.argument
+            }
+        }
+
+        // remove all 'db' calls
+        this.instructions = instructions.filter(instruction => instruction.instruction != 'db')
     }
 
     executeHaltInstruction = function(instruction){
@@ -58,8 +61,14 @@ class NerdiEngine{
     }
 
     executeJmpInstruction = function(instruction){
-        const targetValue = this.values[instruction.argument]
-        this.registers.programCounter = targetValue
+        const targetLabel = instruction.argument
+        const targetInstructionIndex = this.instructions.findIndex(
+            instruction => instruction.label == targetLabel
+        )
+        if(targetInstructionIndex == -1){
+            throw `Jump index ${targetInstructionIndex} not found`
+        }
+        this.registers.programCounter = targetInstructionIndex
     }
 
     executeJmpCarryInstruction = function(instruction){
@@ -89,23 +98,34 @@ class NerdiEngine{
     }
 
     executeInstruction = function(instruction){
-        const callback = this.instructionCallbacks[instruction.instruction]
-        if(callback == undefined){
-            throw `Instruction {instruction.instruction} not found`
+        const instructionCallbacks = {
+            halt: this.executeHaltInstruction,
+            load: this.executeLoadInstruction,
+            store: this.executeStoreInstruction,
+            add: this.executeAddInstruction,
+            sub: this.executeSubInstruction,
+            jmp: this.executeJmpInstruction,
+            jmpc: this.executeJmpCarryInstruction,
+            jmpz: this.executeJmpZeroInstruction
         }
-        callback(instruction)
+
+        const callback = instructionCallbacks[instruction.instruction]
+        if(callback == undefined){
+            throw `Instruction ${instruction.instruction} not found`
+        }
+        callback.call(this, instruction)
     }
 
     executeNextInstruction = function() {
-        currentInstructionIndex++
-        const nextInstruction = this.instructions[currentInstructionIndex]
+        const nextInstruction = this.instructions[this.registers.programCounter]
+        this.registers.programCounter++
 
         this.executeInstruction(nextInstruction)
     }
 }
 
 
-class NerdiInstruction{
+export class NerdiInstruction{
     instruction = undefined
     argument = undefined
     label = undefined
