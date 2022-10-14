@@ -52,7 +52,7 @@ export class NerdiEngine{
         const argumentValue = this.values[instruction.argument]
         const result = this.registers.accumulator - argumentValue
 
-        this.registers.carry = result < 255
+        this.registers.carry = result < 0
         while(result < 0){
             result += 256
         }
