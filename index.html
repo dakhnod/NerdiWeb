@@ -31,6 +31,9 @@
         mark.code-line {
             background-color: greenyellow;
         }
+        span.code-readonly {
+            display: inline-block
+        }
     </style>
 
 </head>
@@ -38,17 +41,11 @@
 <body>
 
     <textarea id="code-text-edit" class="form-control" style="min-height: 200px">
-        start LOAD a; start label
-        ADD  b   ; adding something
-        STORE c  	  ; storing    back
-        LOAD a
-        SUB a
-        JMP start
-        a DB 20
-        b DB 30
     </textarea>
 
-    <span id="code-text-readonly" class="d-inline-block">
+    <span id="text-error" class="text-danger"></span>
+
+    <span id="code-text-readonly" class="code-readonly">
     </span>
 
     <div class="d-flex control-container flex-wrap">

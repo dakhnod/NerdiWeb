@@ -5,6 +5,7 @@ export class NerdiEngine{
     values = {}
     instructions = []
     isHalted = false
+    labels = undefined
 
     registers = {
         programCounter: 0,
@@ -13,18 +14,12 @@ export class NerdiEngine{
         zero: false
     }
 
-    loadInstructions = function(instructions) {
+    loadProgram = function(program) {
         this.registers.programCounter = 0
         this.isHalted = false
-        this.values = {}
-        for(const instruction of instructions){
-            if(instruction.instruction == 'db'){
-                this.values[instruction.label] = instruction.argument
-            }
-        }
-
-        // remove all 'db' calls
-        this.instructions = instructions.filter(instruction => instruction.instruction != 'db')
+        this.values = program.memoryInitital
+        this.instructions = program.instructions
+        this.labels = program.labels
     }
 
     executeHaltInstruction = function(instruction){
@@ -37,7 +32,10 @@ export class NerdiEngine{
         }
 
         const argumentValue = this.values[instruction.argument]
-        const result = this.registers.accumulator + argumentValue
+        if(argumentValue == undefined){
+            throw `Label ${instruction.argument} not found in line ${instruction.lineNumber + 1}`
+        }
+        const result = argumentValue+ this.registers.accumulator
 
         this.registers.carry = result > 255
         this.registers.accumulator = result % 256
@@ -50,7 +48,7 @@ export class NerdiEngine{
         }
 
         const argumentValue = this.values[instruction.argument]
-        const result = this.registers.accumulator - argumentValue
+        var result = argumentValue - this.registers.accumulator
 
         this.registers.carry = result < 0
         while(result < 0){
@@ -62,11 +60,12 @@ export class NerdiEngine{
 
     executeJmpInstruction = function(instruction){
         const targetLabel = instruction.argument
+        const targetAddress = this.labels[targetLabel]
         const targetInstructionIndex = this.instructions.findIndex(
-            instruction => instruction.label == targetLabel
+            instruction => instruction.address == targetAddress
         )
         if(targetInstructionIndex == -1){
-            throw `Jump index ${targetInstructionIndex} not found`
+            throw `Jump index ${targetLabel} not found in line ${instruction.lineNumber + 1}`
         }
         this.registers.programCounter = targetInstructionIndex
     }
@@ -101,7 +100,7 @@ export class NerdiEngine{
         const instructionCallbacks = {
             halt: this.executeHaltInstruction,
             load: this.executeLoadInstruction,
-            store: this.executeStoreInstruction,
+            stor: this.executeStoreInstruction,
             add: this.executeAddInstruction,
             sub: this.executeSubInstruction,
             jmp: this.executeJmpInstruction,
@@ -134,11 +133,28 @@ export class NerdiInstruction{
     argument = undefined
     label = undefined
     lineNumber = undefined
+    address = undefined
+    instructionByte = undefined
 
-    constructor(instruction, argument, label, lineNumber){
+    constructor(instruction, argument, label, address, lineNumber){
         this.instruction = instruction
         this.argument = argument
         this.label = label
+        this.address = address
         this.lineNumber = lineNumber
+    }
+}
+
+export class NerdiProgram{
+    instructions = undefined
+    memoryOffset = undefined
+    memoryInitital = undefined
+    labels = undefined
+
+    constructor(instructions, memoryOffset, memoryInitital, labels){
+        this.instructions = instructions
+        this.memoryOffset = memoryOffset
+        this.memoryInitital = memoryInitital
+        this.labels = labels
     }
 }
