@@ -53,6 +53,28 @@
 <body>
 
     <textarea id="code-text-edit" class="form-control" style="min-height: 200px">
+
+        ; Addition der Zahlen von 1 bis 10
+        START
+            LOAD sum   ; sum = sum + count
+            ADD        COUNT
+            STOR sum
+            LOAD COUNT ; count++
+            ADD         EINS
+            STOR COUNT
+            SUB      NMAX
+            JMPZ  ENDE
+            JMP START
+        ENDE HALT
+        ;
+        ; Datenblock
+             ORG 0x10    ; Konst 1
+        EINS  DB 01      ; Konst 1
+        NMAX  DB 0x0B    ; Maximalzahl
+        COUNT DB 01      ; Zaehler
+        sum   DB 00      ; Ergebnis
+            END
+    
     </textarea>
 
     <span id="text-error" class="text-danger"></span>
