@@ -249,13 +249,14 @@ const module = (function() {
             const program = getCompiledCodeFromTextArea()
             engine.loadProgram(program)
             var instructionsCount = 0
+            const instructionStepLimit = 1000
             for(;;instructionsCount++){
                 engine.executeNextInstruction()
                 if(engine.isHalted){
                     break
                 }
-                if(instructionsCount > 1000){
-                    throw 'Exceeded 1000 steps'
+                if(instructionsCount > instructionStepLimit){
+                    throw `Exceeded ${instructionStepLimit} steps. Possible infite loop detected.`
                 }
             }
             state = 'idle'
