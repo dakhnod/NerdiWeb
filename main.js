@@ -10,6 +10,7 @@ const module = (function() {
     const textMemory = $('#text-memory')
     const textCodeEdit = $('#code-text-edit')
     const textCodeReadOnly = $('#code-text-readonly')
+    const divMemoryMap = $('#memory-map')
     var state = 'idle'
 
     function init(){
@@ -56,6 +57,7 @@ const module = (function() {
 
         displayRegisters()
         displayMemory()
+        displayMemoryMap()
     }
 
     function displayError(text){
@@ -76,6 +78,83 @@ const module = (function() {
             }
         }
         textCodeReadOnly.html(codeTextReadOnly)
+    }
+
+    function displayMemoryMap(){
+        if(engine.instructions == undefined){
+            return
+        }
+        if(engine.values == undefined){
+            return
+        }
+        var codeBytes = engine.instructions.map(instruction => instruction.instructionByte)
+        const nullCodeByteCount = engine.memoryOffset - codeBytes.length
+        codeBytes = codeBytes.concat(new Array(nullCodeByteCount).fill(0))
+
+        const currentInstruction = engine.instructions[engine.registers.programCounter]
+        var targetAddress = -1
+        if(currentInstruction != undefined && currentInstruction.argument != undefined){
+            targetAddress = engine.labels[currentInstruction.argument]
+            if(!currentInstruction.instruction.startsWith('jmp')){
+                targetAddress += engine.memoryOffset
+            }
+        }
+
+        const memoryBytes = Object.values(engine.values)
+
+        const totalBytes = codeBytes.concat(memoryBytes)
+
+        const bytesPerRow = 8
+
+        const rowCount = Math.ceil(totalBytes.length / bytesPerRow)
+
+        const tableNode = $('<table/>')
+
+        for(var currentRow = 0; currentRow < rowCount; currentRow++){
+            const rowNode = $('<tr>')
+
+            const bytesOffset = currentRow * bytesPerRow
+            const bytesLeft = totalBytes.length - bytesOffset
+            const bytesCount = Math.min(bytesPerRow, bytesLeft)
+
+            const addressRow = $('<td>')
+            var addressHex = Number(currentRow * bytesPerRow).toString(16)
+            if(currentRow < 2){
+                addressHex = `0${addressHex}`
+            }
+
+            addressRow.text(`0x${addressHex}`)
+
+            addressRow.addClass('memory-cell')
+            addressRow.addClass('memory-cell-address')
+            rowNode.append(addressRow)
+
+            for(var currentByte = 0; currentByte < bytesCount; currentByte++){
+                const offsetIndex = currentByte + bytesOffset
+                const byte = totalBytes[offsetIndex]
+                const columnNode = $('<td>')
+                columnNode.addClass('memory-cell')
+                var text = byte.toString(16)
+                if(byte < 16){
+                    text = `0${text}`
+                }
+                columnNode.text(text)
+                if(currentInstruction != undefined && currentInstruction.address == offsetIndex){
+                    columnNode.addClass('memory-current-instruction')
+                }
+                if(targetAddress == offsetIndex){
+                    columnNode.addClass('memory-current-argument')
+                }
+                rowNode.append(columnNode)
+            }
+
+            tableNode.append(rowNode)
+        }
+
+        divMemoryMap.empty()
+        divMemoryMap.append(tableNode)
+
+        console.log()
     }
 
     function displayRegisters(){

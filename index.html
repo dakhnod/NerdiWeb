@@ -29,10 +29,22 @@
             border-color: rgba(0, 0, 0, 0.3);
         }
         mark.code-line {
-            background-color: greenyellow;
+            background-color: #007bff60;
         }
         span.code-readonly {
             display: inline-block
+        }
+        td.memory-current-instruction {
+            background-color: #007bff60;
+        }
+        td.memory-current-argument {
+            background-color: #007bff33;
+        }
+        td.memory-cell {
+            padding: 5px;
+        }
+        td.memory-cell-address {
+            color: rgba(0, 0, 0, 0.4)
         }
     </style>
 
@@ -61,6 +73,9 @@
         </div>
         <div class="engine-box">
             <span class="d-inline-block" id="text-memory"></span>
+        </div>
+        <div class="engine-box">
+            <div id="memory-map"></div>
         </div>
     </div>
         

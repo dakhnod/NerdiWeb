@@ -2,10 +2,11 @@
 export const name = 'engine'
 
 export class NerdiEngine{
-    values = {}
-    instructions = []
+    values = undefined
+    instructions = undefined
     isHalted = false
     labels = undefined
+    memoryOffset = undefined
 
     registers = {
         programCounter: 0,
@@ -20,6 +21,7 @@ export class NerdiEngine{
         this.values = program.memoryInitital
         this.instructions = program.instructions
         this.labels = program.labels
+        this.memoryOffset = program.memoryOffset
     }
 
     executeHaltInstruction = function(instruction){
