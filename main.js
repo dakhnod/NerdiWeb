@@ -6,8 +6,8 @@ const module = (function() {
     const runCodeStepButton = $('#button-run-code-step')
     const codeStepButton = $('#button-code-step')
     const codeStopButton = $('#button-code-stop')
-    const textRegisters = $('#text-registers')
-    const textMemory = $('#text-memory')
+    const divRegisters = $('#memory-registers')
+    const divVariables = $('#memory-variables')
     const textCodeEdit = $('#code-text-edit')
     const textCodeReadOnly = $('#code-text-readonly')
     const divMemoryMap = $('#memory-map')
@@ -91,7 +91,7 @@ const module = (function() {
         const nullCodeByteCount = engine.memoryOffset - codeBytes.length
         codeBytes = codeBytes.concat(new Array(nullCodeByteCount).fill(0))
 
-        const currentInstruction = engine.instructions[engine.registers.programCounter]
+        const currentInstruction = engine.getCurrentInstruction()
         var targetAddress = -1
         if(currentInstruction != undefined && currentInstruction.argument != undefined){
             targetAddress = engine.labels[currentInstruction.argument]
@@ -158,22 +158,55 @@ const module = (function() {
     }
 
     function displayRegisters(){
+        divRegisters.empty()
         const registers = engine.registers
 
-        const registerText = `PC: ${registers.programCounter}<br>Accumulator: ${registers.accumulator}<br>Carry: ${registers.carry}<br>Zero: ${registers.zero}`
+        const map = {
+            programCounter: 'PC',
+            accumulator: 'Akkumulator',
+            carry: 'Carry',
+            zero: 'Zero'
+        }
 
-        textRegisters.html(registerText)
+        for(const key in map){
+            const span = $('<span>')
+            span.addClass('d-block')
+            const currentInstruction = engine.getCurrentInstruction()
+            if(currentInstruction != undefined){
+                if(key == 'zero' && currentInstruction.instruction == 'jmpz'){
+                    span.addClass(`memory-current-argument-${engine.registers.zero}`)
+                }
+                if(key == 'carry' && currentInstruction.instruction == 'jmpc'){
+                    span.addClass(`memory-current-argument-${engine.registers.carry}`)
+                }
+            }
+            span.text(`${map[key]}: ${registers[key]}`)
+            divRegisters.append(span)
+        }
     }
 
     function displayMemory(){
         const memory = engine.values
 
-        var memoryText = 'Memory<br>'
-        for(const key in memory){
-            memoryText += `<br>${key}: ${memory[key]}`
-        }
+        divVariables.empty()
 
-        textMemory.html(memoryText)
+        const currentArgument = function(){
+            const currentInstruction = engine.getCurrentInstruction()
+            if(currentInstruction == undefined){
+                return undefined
+            }
+            return currentInstruction.argument
+        }()
+
+        for(const key in memory){
+            const spanNode = $('<span>')
+            spanNode.text(`${key}: ${memory[key]}`)
+            spanNode.addClass('d-block')
+            if(currentArgument != undefined && key == currentArgument){
+                spanNode.addClass('memory-current-argument')
+            }
+            divVariables.append(spanNode) 
+        }
     }
 
     function getCompiledCodeFromTextArea(){
@@ -314,16 +347,16 @@ const module = (function() {
             }
 
             function parsePossibleNumber(value){
-                const isArgumentNumber = (argument.match(/^[0-8]+$/) != null)
+                const isArgumentNumber = (value.match(/^[0-8]+$/) != null)
                 if(isArgumentNumber){
-                    return parseInt(argument, 8)
+                    return parseInt(value, 8)
                 }
-                const isArgumentHexNumber = (argument.match(/^0x[0-9a-f]+$/i) != null)
+                const isArgumentHexNumber = (value.match(/^0x[0-9a-f]+$/i) != null)
                 if(isArgumentHexNumber){
-                    return parseInt(argument.substring(2), 16)
+                    return parseInt(value.substring(2), 16)
                 }
 
-                return argument
+                return value
             }
 
             if(argument != undefined){

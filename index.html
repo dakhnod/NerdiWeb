@@ -37,14 +37,23 @@
         td.memory-current-instruction {
             background-color: #007bff60;
         }
-        td.memory-current-argument {
+        .memory-current-argument {
             background-color: #007bff33;
+        }
+        .memory-current-argument-false {
+            background-color: #ff000033;
+        }
+        .memory-current-argument-true {
+            background-color: #00ff2233;
         }
         td.memory-cell {
             padding: 5px;
         }
         td.memory-cell-address {
             color: rgba(0, 0, 0, 0.4)
+        }
+        span.memory-label {
+            color: rgba(0, 0, 0, 0.5)
         }
     </style>
 
@@ -79,8 +88,7 @@
 
     <span id="text-error" class="text-danger"></span>
 
-    <span id="code-text-readonly" class="code-readonly">
-    </span>
+    <span id="code-text-readonly" class="code-readonly"></span>
 
     <div class="d-flex control-container flex-wrap">
         <button id="button-run-code" class="btn btn-primary">Run code</button>
@@ -91,18 +99,18 @@
 
     <div class="d-flex flex-wrap engine-display">
         <div class="engine-box">
-            <span class="d-inline-block engine-box" id="text-registers"></span>
+            <span class="memory-label">Registers</span>
+            <div id="memory-registers" class=""></div>
         </div>
         <div class="engine-box">
-            <span class="d-inline-block" id="text-memory"></span>
+            <span class="memory-label">Variables</span>
+            <div id="memory-variables" class=""></div>
         </div>
         <div class="engine-box">
+            <span class="memory-label">Memory</span>
             <div id="memory-map"></div>
         </div>
     </div>
-        
-    </span>
-
 
 
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"

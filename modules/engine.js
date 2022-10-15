@@ -4,7 +4,7 @@ export const name = 'engine'
 export class NerdiEngine{
     values = undefined
     instructions = undefined
-    isHalted = false
+    isHalted = true
     labels = undefined
     memoryOffset = undefined
 
@@ -118,13 +118,19 @@ export class NerdiEngine{
     }
 
     executeNextInstruction = function() {
-        const nextInstruction = this.instructions[this.registers.programCounter]
+        const nextInstruction = this.getCurrentInstruction()
         this.registers.programCounter++
 
         this.executeInstruction(nextInstruction)
     }
 
     getCurrentInstruction = function(){
+        if(this.isHalted){
+            return undefined
+        }
+        if(this.instructions == undefined){
+            return undefined
+        }
         return this.instructions[this.registers.programCounter]
     }
 }
