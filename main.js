@@ -108,7 +108,7 @@ const module = (function() {
 
         const rowCount = Math.ceil(totalBytes.length / bytesPerRow)
 
-        const tableNode = $('<table/>')
+        const tableNode = $('<table>')
 
         for(var currentRow = 0; currentRow < rowCount; currentRow++){
             const rowNode = $('<tr>')
@@ -159,29 +159,90 @@ const module = (function() {
 
     function displayRegisters(){
         divRegisters.empty()
-        const registers = engine.registers
 
-        const map = {
+        const mapText = {
             programCounter: 'PC',
             accumulator: 'Akkumulator',
-            carry: 'Carry',
-            zero: 'Zero'
         }
 
-        for(const key in map){
-            const span = $('<span>')
-            span.addClass('d-block')
+        for(const key in mapText){
+            const div = $('<div>')
+            div.addClass('d-block')
+
+            const label = $('<label>')
+            label.addClass('register-label')
+            label.text(mapText[key])
+            div.append(label)
+
+            const edit = $('<input>')
+            edit.addClass('register-number')
+            edit.prop('type', 'number')
+
+            if(state != 'stepping'){
+                edit.prop('disabled', true)
+            }
+
+            edit.val(engine.registers[key])
+
+            edit.change(function(event){
+                engine.registers[key] = event.currentTarget.value
+            })
+            
+
+            div.append(edit)
+
+            divRegisters.append(div)
+        }
+
+        const mapBoolean = {
+            carry: 'Carry',
+            zero: 'Zero',
+        }
+
+        for(const key in mapBoolean){
+            const div = $('<div>')
+            div.addClass('d-block')
+
+            const label = $('<label>')
+            label.addClass('register-label')
+            label.text(mapBoolean[key])
+            div.append(label)
+
+            const checkbox = $('<input>')
+            checkbox.prop('type', 'checkbox')
+
+            if(state != 'stepping'){
+                checkbox.prop('disabled', true)
+            }
+            if(engine.registers[key]){
+                checkbox.prop('checked', true)
+            }
+
             const currentInstruction = engine.getCurrentInstruction()
-            if(currentInstruction != undefined){
-                if(key == 'zero' && currentInstruction.instruction == 'jmpz'){
-                    span.addClass(`memory-current-argument-${engine.registers.zero}`)
-                }
-                if(key == 'carry' && currentInstruction.instruction == 'jmpc'){
-                    span.addClass(`memory-current-argument-${engine.registers.carry}`)
+
+            function highlightCheckboxIfImportant(){
+                if(currentInstruction != undefined){
+                    if(key == 'zero' && currentInstruction.instruction == 'jmpz'){
+                        label.removeClass(`memory-current-argument-${!engine.registers.zero}`)
+                        label.addClass(`memory-current-argument-${engine.registers.zero}`)
+                    }
+                    if(key == 'carry' && currentInstruction.instruction == 'jmpc'){
+                        label.removeClass(`memory-current-argument-${!engine.registers.carry}`)
+                        label.addClass(`memory-current-argument-${engine.registers.carry}`)
+                    }
                 }
             }
-            span.text(`${map[key]}: ${registers[key]}`)
-            divRegisters.append(span)
+
+            checkbox.change(function(event){
+                engine.registers[key] = event.currentTarget.checked
+                highlightCheckboxIfImportant()
+            })
+
+            highlightCheckboxIfImportant()
+
+            div.append(checkbox)
+
+            divRegisters.append(div)
         }
     }
 
