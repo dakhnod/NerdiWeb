@@ -8,9 +8,11 @@ export class NerdiEngine{
     labels = undefined
     memoryOffset = undefined
 
+    snapshots = []
+
     registers = {
         programCounter: 0,
-        accumulator: undefined,
+        accumulator: 0,
         carry: false,
         zero: false
     }
@@ -98,6 +100,12 @@ export class NerdiEngine{
         this.values[instruction.argument] = this.registers.accumulator
     }
 
+    restorePreviousSnapshot(){
+        const newSnapshot = this.snapshots.pop()
+        this.registers = newSnapshot.registers
+        this.values = newSnapshot.memory
+    }
+
     executeInstruction = function(instruction){
         const instructionCallbacks = {
             halt: this.executeHaltInstruction,
@@ -109,6 +117,18 @@ export class NerdiEngine{
             jmpc: this.executeJmpCarryInstruction,
             jmpz: this.executeJmpZeroInstruction
         }
+
+        const registersCopy = JSON.parse(JSON.stringify(this.registers))
+        registersCopy.programCounter--
+        this.snapshots.push(
+            new NerdiEngineSnapshot(
+                registersCopy, 
+                JSON.parse(JSON.stringify(this.values))
+            )
+        )
+        const maxSnapshotsLength = 32
+        const lengthOverflow = this.snapshots.length - maxSnapshotsLength
+        this.snapshots.splice(0, lengthOverflow)
 
         const callback = instructionCallbacks[instruction.instruction]
         if(callback == undefined){
@@ -164,5 +184,15 @@ export class NerdiProgram{
         this.memoryOffset = memoryOffset
         this.memoryInitital = memoryInitital
         this.labels = labels
+    }
+}
+
+class NerdiEngineSnapshot{
+    registers = undefined
+    memory = undefined
+
+    constructor(registers, memory){
+        this.registers = registers
+        this.memory = memory
     }
 }

@@ -4,9 +4,11 @@ const module = (function() {
     const engine = new NerdiEngine()
     const runCodeButton = $('#button-run-code')
     const runCodeStepButton = $('#button-run-code-step')
-    const codeStepButton = $('#button-code-step')
+    const codeStepBackwardButton = $('#button-code-step-backward')
+    const codeStepForwardButton = $('#button-code-step-forward')
     const codePauseButton = $('#button-code-pause')
     const codeStopButton = $('#button-code-stop')
+    const codeStepPeriodSelectButton = $('#select-label-step-period')
     const divRegisters = $('#memory-registers')
     const divVariables = $('#memory-variables')
     const textCodeEdit = $('#code-text-edit')
@@ -14,11 +16,19 @@ const module = (function() {
     const divMemoryMap = $('#memory-map')
     var state = 'idle'
 
+    var autoRunTimeout = undefined
+
+    var stepPeriod = 1000
+
     function init(){
         runCodeButton.click(handleCodeCompileAndRun)
         runCodeStepButton.click(handleCodeCompileAndRunStep)
-        codeStepButton.click(handleCodeStep)
+        codeStepBackwardButton.click(handleCodeStepBackward)
+        codeStepForwardButton.click(handleCodeStepForward)
+        codePauseButton.click(handleCodePause)
         codeStopButton.click(handleCodeStop)
+
+        $('.select-step-period').click(handleStepPeriodSelect)
 
         const savedCode = localStorage.getItem('code_last')
         if(savedCode != undefined){
@@ -28,19 +38,36 @@ const module = (function() {
         drawUI()
     }
 
+    function handleStepPeriodSelect(event){
+        const period = Number(event.currentTarget.dataset['period'])
+        console.log(period)
+        stepPeriod = period
+        codeStepPeriodSelectButton.text(`${stepPeriod / 1000}s`)
+    }
+
+    function handleCodePause(){
+        stopAutoCodeRun()
+        state = 'stepping'
+
+        drawUI()
+    }
+
     function drawUI(){
         const stateButtonsMap = {
             'idle': [
                 runCodeButton,
-                runCodeStepButton
+                runCodeStepButton,
+                codeStepPeriodSelectButton
             ],
             'running': [
                 codePauseButton,
                 codeStopButton
             ],
             'stepping': [
-                codeStepButton,
-                codeStopButton
+                runCodeButton,
+                codeStepForwardButton,
+                codeStopButton,
+                codeStepPeriodSelectButton
             ]
         }
 
@@ -53,10 +80,14 @@ const module = (function() {
             activeButton.prop('disabled', false)
         }
 
+        if(state == 'stepping' && engine.snapshots.length > 0){
+            codeStepBackwardButton.prop('disabled', false)
+        }
+
         if(state == 'idle'){
             textCodeEdit.show()
             textCodeReadOnly.hide()
-        }else if(['running', 'stepping'].includes(states)){
+        }else if(['running', 'stepping'].includes(state)){
             textCodeEdit.hide()
             textCodeReadOnly.show()
         }
@@ -285,7 +316,17 @@ const module = (function() {
         return compileCode(codeText)
     }
 
-    function handleCodeStep(){
+    function handleCodeStepBackward(){
+        if(engine.snapshots.length == 0){
+            console.error('no snapshots to go backward')
+            return
+        }
+
+        engine.restorePreviousSnapshot()
+        drawUI()
+    }
+
+    function handleCodeStepForward(){
         try{
             displayError('')
             engine.executeNextInstruction()
@@ -295,6 +336,7 @@ const module = (function() {
     
             drawUI()
         }catch(e){
+            console.error(e)
             displayError(e)
             state = 'idle'
             drawUI()
@@ -302,9 +344,18 @@ const module = (function() {
     }
 
     function handleCodeStop(){
+        stopAutoCodeRun()
         state = 'idle'
 
         drawUI()
+    }
+
+    function stopAutoCodeRun(){
+        if(autoRunTimeout == undefined){
+            return
+        }
+        clearTimeout(autoRunTimeout)
+        autoRunTimeout = undefined
     }
 
     function saveCodeToLocalStorage(){
@@ -318,10 +369,11 @@ const module = (function() {
             if(engine.isHalted){
                 state = 'idle'
             }else{
-                setTimeout(autoRunCodeStep, 1000)
+                autoRunTimeout = setTimeout(autoRunCodeStep, stepPeriod)
             }
             drawUI()
         }catch(e){
+            console.error(e)
             displayError(e)
             state = 'idle'
             drawUI()
@@ -331,6 +383,11 @@ const module = (function() {
     function handleCodeCompileAndRun(){
         try{
             displayError('')
+            if(state == 'stepping'){
+                state = 'running'
+                autoRunCodeStep()
+                return
+            }
             saveCodeToLocalStorage()
             state = 'running'
             const program = getCompiledCodeFromTextArea()
@@ -338,6 +395,7 @@ const module = (function() {
 
             autoRunCodeStep()
         }catch(e){
+            console.error(e)
             displayError(e)
             state = 'idle'
             drawUI()
@@ -358,6 +416,7 @@ const module = (function() {
             }
             drawUI()
         }catch(e){
+            console.error(e)
             displayError(e)
             state = 'idle'
             drawUI()

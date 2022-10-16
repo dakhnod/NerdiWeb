@@ -97,9 +97,23 @@
     <span id="code-text-readonly" class="code-readonly"></span>
 
     <div class="d-flex control-container flex-wrap">
-        <button id="button-run-code" class="btn btn-primary button-flow-control">Run code</button>
+        <div class="btn-group">
+            <button id="button-run-code" class="btn btn-primary button-flow-control">Run code</button>
+            <div class="dropdown" id="select-step-period">
+                <button id="select-label-step-period" class="btn btn-primary dropdown-toggle button-flow-control" data-toggle="dropdown" type="button">1s</button>
+                <div class="dropdown-menu">
+                    <span data-period="125" class="dropdown-item select-step-period">0.125s</span>
+                    <span data-period="500" class="dropdown-item select-step-period">0.5s</span>
+                    <span data-period="1000" class="dropdown-item select-step-period">1s</span>
+                    <span data-period="2000" class="dropdown-item select-step-period">2s</span>
+                </div>
+            </div>
+        </div>
         <button id="button-run-code-step" class="btn btn-primary button-flow-control">Run code (step)</button>
-        <button id="button-code-step" class="btn btn-primary button-flow-control">Next step</button>
+        <div class="btn-group">
+            <button id="button-code-step-backward" class="btn btn-primary button-flow-control">Step backward</button>
+            <button id="button-code-step-forward" class="btn btn-primary button-flow-control">forward</button>
+        </div>
         <button id="button-code-pause" class="btn btn-primary button-flow-control">Pause execution</button>
         <button id="button-code-stop" class="btn btn-primary button-flow-control">Stop execution</button>
     </div>
