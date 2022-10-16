@@ -5,6 +5,7 @@ const module = (function() {
     const runCodeButton = $('#button-run-code')
     const runCodeStepButton = $('#button-run-code-step')
     const codeStepButton = $('#button-code-step')
+    const codePauseButton = $('#button-code-pause')
     const codeStopButton = $('#button-code-stop')
     const divRegisters = $('#memory-registers')
     const divVariables = $('#memory-variables')
@@ -28,31 +29,40 @@ const module = (function() {
     }
 
     function drawUI(){
-        if(state == 'idle'){
-            runCodeButton.prop('disabled', false)
-            runCodeStepButton.prop('disabled', false)
-            codeStepButton.prop('disabled', true)
-            codeStopButton.prop('disabled', true)
+        const stateButtonsMap = {
+            'idle': [
+                runCodeButton,
+                runCodeStepButton
+            ],
+            'running': [
+                codePauseButton,
+                codeStopButton
+            ],
+            'stepping': [
+                codeStepButton,
+                codeStopButton
+            ]
+        }
 
+        const activeButtons  = stateButtonsMap[state]
+
+        const buttons = $('.button-flow-control')
+        buttons.prop('disabled', true)
+
+        for(const activeButton of activeButtons){
+            activeButton.prop('disabled', false)
+        }
+
+        if(state == 'idle'){
             textCodeEdit.show()
             textCodeReadOnly.hide()
-        }else if(state == 'stepping'){
-            runCodeButton.prop('disabled', true)
-            runCodeStepButton.prop('disabled', true)
-            codeStepButton.prop('disabled', false)
-            codeStopButton.prop('disabled', false)
-
+        }else if(['running', 'stepping'].includes(states)){
             textCodeEdit.hide()
             textCodeReadOnly.show()
-            displayCode()
-        }else if(state == 'running'){
-            runCodeButton.prop('disabled', true)
-            runCodeStepButton.prop('disabled', true)
-            codeStepButton.prop('disabled', true)
-            codeStopButton.prop('disabled', true)
+        }
 
-            textCodeEdit.show()
-            textCodeReadOnly.hide()
+        if(['running', 'stepping'].includes(state)){
+            displayCode()
         }
 
         displayRegisters()
@@ -302,6 +312,22 @@ const module = (function() {
         localStorage.setItem('code_last', codeText)
     }
 
+    function autoRunCodeStep(){
+        try{
+            engine.executeNextInstruction()
+            if(engine.isHalted){
+                state = 'idle'
+            }else{
+                setTimeout(autoRunCodeStep, 1000)
+            }
+            drawUI()
+        }catch(e){
+            displayError(e)
+            state = 'idle'
+            drawUI()
+        }
+    }
+
     function handleCodeCompileAndRun(){
         try{
             displayError('')
@@ -309,19 +335,8 @@ const module = (function() {
             state = 'running'
             const program = getCompiledCodeFromTextArea()
             engine.loadProgram(program)
-            var instructionsCount = 0
-            const instructionStepLimit = 1000
-            for(;;instructionsCount++){
-                engine.executeNextInstruction()
-                if(engine.isHalted){
-                    break
-                }
-                if(instructionsCount > instructionStepLimit){
-                    throw `Exceeded ${instructionStepLimit} steps. Possible infite loop detected.`
-                }
-            }
-            state = 'idle'
-            drawUI()
+
+            autoRunCodeStep()
         }catch(e){
             displayError(e)
             state = 'idle'
