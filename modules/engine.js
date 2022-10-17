@@ -2,13 +2,16 @@
 export const name = 'engine'
 
 export class NerdiEngine{
-    values = undefined
     instructions = undefined
     isHalted = true
-    labels = undefined
-    memoryOffset = undefined
 
     snapshots = []
+
+    memory = new Array(32)
+
+    constructor(){
+        this.clearMemory()
+    }
 
     registers = {
         programCounter: 0,
@@ -20,38 +23,41 @@ export class NerdiEngine{
     loadProgram = function(program) {
         this.registers.programCounter = 0
         this.isHalted = false
-        this.values = program.memoryInitital
         this.instructions = program.instructions
-        this.labels = program.labels
-        this.memoryOffset = program.memoryOffset
+        this.memory = program.initialMemory
+        this.dataCells = program.dataCells
     }
 
-    executeHaltInstruction = function(instruction){
+    executeHaltInstruction = function(){
         this.isHalted = true
     }
 
-    executeAddInstruction = function(instruction){
-        if(this.registers.accumulator == null){
-            throw 'Accumulator not loaded. Use LOAD instruction';
-        }
+    clearMemory = function(){
+        this.memory.fill(0)
+    }
 
-        const argumentValue = this.values[instruction.argument]
-        if(argumentValue == undefined){
-            throw `Label ${instruction.argument} not found in line ${instruction.lineNumber + 1}`
+    getVariableFromMemory(relativeAddress){
+        return this.memory[relativeAddress]
+    }
+
+    getCurrentInstruction = function(){
+        if(this.instructions == undefined){
+            return undefined
         }
-        const result = argumentValue+ this.registers.accumulator
+        return this.instructions[this.registers.programCounter]
+    }
+
+    executeAddInstruction = function(argumentAddress){
+        const argumentValue = this.getVariableFromMemory(argumentAddress)
+        const result = argumentValue + this.registers.accumulator
 
         this.registers.carry = result > 255
         this.registers.accumulator = result % 256
         this.registers.zero = (this.registers.accumulator == 0)
     }
 
-    executeSubInstruction = function(instruction){
-        if(this.registers.accumulator == null){
-            throw 'Accumulator not loaded. Use LOAD instruction';
-        }
-
-        const argumentValue = this.values[instruction.argument]
+    executeSubInstruction = function(argumentAddress){
+        const argumentValue = this.getVariableFromMemory(argumentAddress)
         var result = argumentValue - this.registers.accumulator
 
         this.registers.carry = result < 0
@@ -62,51 +68,39 @@ export class NerdiEngine{
         this.registers.zero = (this.registers.accumulator == 0)
     }
 
-    executeJmpInstruction = function(instruction){
-        const targetLabel = instruction.argument
-        const targetAddress = this.labels[targetLabel]
-        const targetInstructionIndex = this.instructions.findIndex(
-            instruction => instruction.address == targetAddress
-        )
-        if(targetInstructionIndex == -1){
-            throw `Jump index ${targetLabel} not found in line ${instruction.lineNumber + 1}`
-        }
-        this.registers.programCounter = targetInstructionIndex
+    executeJmpInstruction = function(argumentAddress){
+        this.registers.programCounter = argumentAddress
     }
 
-    executeJmpCarryInstruction = function(instruction){
+    executeJmpCarryInstruction = function(argumentAddress){
         if(!this.registers.carry){
             return
         }
-        this.executeJmpInstruction(instruction)
+        this.executeJmpInstruction(argumentAddress)
     }
 
-    executeJmpZeroInstruction = function(instruction){
+    executeJmpZeroInstruction = function(argumentAddress){
         if(!this.registers.zero){
             return
         }
-        this.executeJmpInstruction(instruction)
+        this.executeJmpInstruction(argumentAddress)
     }
 
-    executeLoadInstruction = function(instruction){
-        const value = this.values[instruction.argument];
-        this.registers.accumulator = value
+    executeLoadInstruction = function(argumentAddress){
+        this.registers.accumulator = this.getVariableFromMemory(argumentAddress);
     }
 
-    executeStoreInstruction = function(instruction){
-        if(this.registers.accumulator == undefined){
-            throw 'Accumulator not loaded. Use LOAD to load something into accumulator'
-        }
-        this.values[instruction.argument] = this.registers.accumulator
+    executeStoreInstruction = function(argumentAddress){
+        this.memory[argumentAddress] = this.registers.accumulator
     }
 
     restorePreviousSnapshot(){
         const newSnapshot = this.snapshots.pop()
         this.registers = newSnapshot.registers
-        this.values = newSnapshot.memory
+        this.memory = newSnapshot.memory
     }
 
-    executeInstruction = function(instruction){
+    executeInstruction = function(instructionByte){
         const instructionCallbacks = {
             halt: this.executeHaltInstruction,
             load: this.executeLoadInstruction,
@@ -123,35 +117,194 @@ export class NerdiEngine{
         this.snapshots.push(
             new NerdiEngineSnapshot(
                 registersCopy, 
-                JSON.parse(JSON.stringify(this.values))
+                JSON.parse(JSON.stringify(this.memory))
             )
         )
+
         const maxSnapshotsLength = 32
         const lengthOverflow = this.snapshots.length - maxSnapshotsLength
         this.snapshots.splice(0, lengthOverflow)
 
-        const callback = instructionCallbacks[instruction.instruction]
+        const opCode = instructionByte >> 5
+        const argument = instructionByte & 0b00011111
+
+        const callback = instructionCallbacks[Object.keys(instructionCallbacks)[opCode]]
         if(callback == undefined){
             throw `Instruction ${instruction.instruction} not found`
         }
-        callback.call(this, instruction)
+        callback.call(this, argument)
     }
 
     executeNextInstruction = function() {
-        const nextInstruction = this.getCurrentInstruction()
+        const nextInstructionByte = this.memory[this.registers.programCounter]
         this.registers.programCounter++
 
-        this.executeInstruction(nextInstruction)
+        this.executeInstruction(nextInstructionByte)
     }
 
-    getCurrentInstruction = function(){
-        if(this.isHalted){
-            return undefined
+
+    compileCode = function(codeText){
+        function isLabelInstruction(label){
+            return ['load', 'stor', 'add', 'sub', 'halt', 'jmp', 'jmpc', 'jmpz'].includes(label.toLowerCase())
         }
-        if(this.instructions == undefined){
-            return undefined
+
+        var memoryOffset = 0
+        const dataCells = []
+        const codeCells = []
+
+        const lines = codeText.split('\n')
+        const instructions = []
+        for(var lineNumber = 0; lineNumber < lines.length; lineNumber++){
+            var line = lines[lineNumber]
+            line = line
+                .replace(/;.*$/, '') // remove comments
+                .replaceAll(/\t/g, ' ') // replace tabs
+                .replaceAll(/ {2,}/g, ' ') // replace multiple spaces
+                .trim() // remove preceding and succeding spaces
+
+            if(line == ''){
+                // skip empty lines
+                continue
+            }
+
+            const parts = line.split(' ')
+            if(parts.length > 3){
+                throw `too many elements in line ${lineNumber}`
+            }
+
+            var label = undefined
+            var instruction = undefined
+            var argument = undefined
+
+            if(parts.length == 1){
+                const value = parts[0]
+                if(isLabelInstruction(value)){
+                    instruction = parts[0]
+                }else{
+                    label = parts[0]
+                }
+            }else if(parts.length == 3){
+                label = parts[0]
+                instruction = parts[1]
+                argument = parts[2]
+            }else if(parts.length == 2){
+                const lastPart = parts[1]
+                const lastPartIsInstruction = isLabelInstruction(lastPart)
+
+                if(lastPartIsInstruction){
+                    label = parts[0]
+                    instruction = parts[1]
+                }else{
+                    instruction = parts[0]
+                    argument = parts[1]
+                }
+            }
+
+            function parsePossibleNumber(value){
+                const isArgumentNumber = (value.match(/^[0-8]+$/) != null)
+                if(isArgumentNumber){
+                    return parseInt(value, 8)
+                }
+                const isArgumentHexNumber = (value.match(/^0x[0-9a-f]+$/i) != null)
+                if(isArgumentHexNumber){
+                    return parseInt(value.substring(2), 16)
+                }
+
+                return value
+            }
+
+            if(argument != undefined){
+                argument = parsePossibleNumber(argument)
+            }
+
+            if(instruction != undefined){
+                instruction = instruction.toLowerCase()
+            }
+
+            if(instruction == 'org'){
+                memoryOffset = argument
+                continue
+            }
+
+            if(label != undefined){
+                if(instruction == 'db'){
+                    dataCells.push(new NerdiDataCell(dataCells.length, label, argument))
+                    continue
+                }else{
+                    codeCells.push(new NerdiDataCell(instructions.length, label, argument))
+                }
+            }
+
+            if(instruction != undefined){
+                instructions.push(
+                    new NerdiInstruction(
+                        instruction,
+                        argument,
+                        label,
+                        instructions.length,
+                        lineNumber
+                    )
+                )
+            }
         }
-        return this.instructions[this.registers.programCounter]
+
+        const instructionOpCodes = [
+            'halt',
+            'load',
+            'stor',
+            'add',
+            'sub',
+            'jmp',
+            'jmpc',
+            'jmpz'
+        ]
+
+        var initialMemory = new Array(32)
+        initialMemory.fill(0x00)
+
+        function getCodeCellByLabel(label){
+            return codeCells.find(codeCell => codeCell.label == label)
+        }
+
+        function getDataCellByLabel(label){
+            return dataCells.find(dataCell => dataCell.label == label)
+        }
+
+        for(const dataCell of dataCells){
+            dataCell.address += memoryOffset
+        }
+
+        for(const instruction of instructions){
+            const indexOfInstruction = instructionOpCodes.indexOf(instruction.instruction)
+            if(indexOfInstruction == -1){
+                throw `Instruction ${instruction.instruction} unknown in line ${instruction.lineNumber + 1}`
+            }
+            instruction.instructionByte = indexOfInstruction << 5
+            if(instruction.argument != undefined){
+                var referedCell = function(){
+                    if(instruction.instruction.startsWith('jmp')){
+                        return getCodeCellByLabel(instruction.argument)
+                    }else{
+                        return getDataCellByLabel(instruction.argument)
+                    }
+                }()
+                
+                if(referedCell == undefined){
+                    throw `Label ${instruction.argument} not found in line ${instruction.lineNumber}`
+                }
+                instruction.instructionByte |= referedCell.address
+            }
+        }
+
+        for(const instruction of instructions){
+            initialMemory[instruction.address] = instruction.instructionByte
+        }
+
+        for(const dataCell of dataCells){
+            initialMemory[dataCell.address] = dataCell.value
+        }
+
+        return new NerdiProgram(initialMemory, instructions, codeCells, dataCells)
     }
 }
 
@@ -171,19 +324,21 @@ export class NerdiInstruction{
         this.address = address
         this.lineNumber = lineNumber
     }
+
+    getTargetAddress = function(){
+        if(!['load', 'stor', 'jmp', 'jmpc', 'jmpz'].includes(this.instruction)){
+            return undefined
+        }
+        return this.instructionByte & 0b00011111
+    }
 }
 
 export class NerdiProgram{
-    instructions = undefined
-    memoryOffset = undefined
-    memoryInitital = undefined
-    labels = undefined
-
-    constructor(instructions, memoryOffset, memoryInitital, labels){
+    constructor(initialMemory, instructions, codeCells, dataCells){
         this.instructions = instructions
-        this.memoryOffset = memoryOffset
-        this.memoryInitital = memoryInitital
-        this.labels = labels
+        this.initialMemory = initialMemory
+        this.codeCells = codeCells,
+        this.dataCells = dataCells
     }
 }
 
@@ -194,5 +349,13 @@ class NerdiEngineSnapshot{
     constructor(registers, memory){
         this.registers = registers
         this.memory = memory
+    }
+}
+
+class NerdiDataCell{
+    constructor(address, label, value){
+        this.address = address
+        this.label = label
+        this.value = value
     }
 }

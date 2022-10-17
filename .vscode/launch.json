@@ -9,7 +9,15 @@
             "request": "launch",
             "name": "Launch Chrome against localhost",
             "url": "http://nerdi.nullco.de",
-            "webRoot": "${workspaceFolder}"
+            "webRoot": "${workspaceFolder}",
+        },
+        {
+            "type": "chrome",
+            "request": "attach",
+            "name": "Attach to chrome",
+            "url": "http://nerdi.localhost",
+            "webRoot": "${workspaceFolder}",
+            "port": 9222
         }
     ]
 }

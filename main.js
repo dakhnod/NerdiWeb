@@ -2,6 +2,7 @@ import { NerdiInstruction, NerdiEngine, NerdiProgram } from './modules/engine.js
 
 const module = (function() {
     const engine = new NerdiEngine()
+    const compileCodeButton = $('#button-code-compile')
     const runCodeButton = $('#button-run-code')
     const runCodeStepButton = $('#button-run-code-step')
     const codeStepBackwardButton = $('#button-code-step-backward')
@@ -21,7 +22,8 @@ const module = (function() {
     var stepPeriod = 1000
 
     function init(){
-        runCodeButton.click(handleCodeCompileAndRun)
+        compileCodeButton.click(handleCodeCompile)
+        runCodeButton.click(handleCodeRun)
         runCodeStepButton.click(handleCodeCompileAndRunStep)
         codeStepBackwardButton.click(handleCodeStepBackward)
         codeStepForwardButton.click(handleCodeStepForward)
@@ -62,6 +64,7 @@ const module = (function() {
     function drawUI(){
         const stateButtonsMap = {
             'idle': [
+                compileCodeButton,
                 runCodeButton,
                 runCodeStepButton,
                 codeStepPeriodSelectButton
@@ -104,7 +107,7 @@ const module = (function() {
         }
 
         displayRegisters()
-        displayMemory()
+        displayVariables()
         displayMemoryMap()
     }
 
@@ -129,28 +132,12 @@ const module = (function() {
     }
 
     function displayMemoryMap(){
-        if(engine.instructions == undefined){
-            return
-        }
-        if(engine.values == undefined){
-            return
-        }
-        var codeBytes = engine.instructions.map(instruction => instruction.instructionByte)
-        const nullCodeByteCount = engine.memoryOffset - codeBytes.length
-        codeBytes = codeBytes.concat(new Array(nullCodeByteCount).fill(0))
-
-        const currentInstruction = engine.getCurrentInstruction()
         var targetAddress = -1
-        if(currentInstruction != undefined && currentInstruction.argument != undefined){
-            targetAddress = engine.labels[currentInstruction.argument]
-            if(!currentInstruction.instruction.startsWith('jmp')){
-                targetAddress += engine.memoryOffset
-            }
+        const currentInstruction = engine.getCurrentInstruction()
+        if(currentInstruction != undefined){
+            targetAddress = currentInstruction.getTargetAddress()
         }
-
-        const memoryBytes = Object.values(engine.values)
-
-        const totalBytes = codeBytes.concat(memoryBytes)
+        const totalBytes = engine.memory
 
         const bytesPerRow = 8
 
@@ -187,9 +174,10 @@ const module = (function() {
                     text = `0${text}`
                 }
                 columnNode.text(text)
-                if(currentInstruction != undefined && currentInstruction.address == offsetIndex){
+                if(engine.registers.programCounter == offsetIndex){
                     columnNode.addClass('memory-current-instruction')
                 }
+                
                 if(targetAddress == offsetIndex){
                     columnNode.addClass('memory-current-argument')
                 }
@@ -292,8 +280,8 @@ const module = (function() {
         }
     }
 
-    function displayMemory(){
-        const memory = engine.values
+    function displayVariables(){
+        const dataCells = engine.dataCells
 
         divVariables.empty()
 
@@ -305,11 +293,15 @@ const module = (function() {
             return currentInstruction.argument
         }()
 
-        for(const key in memory){
+        if(dataCells == undefined){
+            return
+        }
+
+        for(const dataCell of dataCells){
             const spanNode = $('<span>')
-            spanNode.text(`${key}: ${memory[key]}`)
+            spanNode.text(`${dataCell.label}: 0x${dataCell.value.toString(16)}`)
             spanNode.addClass('d-block')
-            if(currentArgument != undefined && key == currentArgument){
+            if(currentArgument != undefined && dataCell.label == currentArgument){
                 spanNode.addClass('memory-current-argument')
             }
             divVariables.append(spanNode) 
@@ -318,7 +310,7 @@ const module = (function() {
 
     function getCompiledCodeFromTextArea(){
         const codeText = textCodeEdit.val()
-        return compileCode(codeText)
+        return engine.compileCode(codeText)
     }
 
     function handleCodeStepBackward(){
@@ -385,19 +377,26 @@ const module = (function() {
         }
     }
 
-    function handleCodeCompileAndRun(){
+    function handleCodeCompile(){
         try{
             displayError('')
-            if(state == 'stepping'){
-                state = 'running'
-                autoRunCodeStep()
-                return
-            }
             saveCodeToLocalStorage()
-            state = 'running'
             const program = getCompiledCodeFromTextArea()
             engine.loadProgram(program)
 
+            drawUI()
+        }catch(e){
+            console.error(e)
+            displayError(e)
+            state = 'idle'
+            drawUI()
+        }
+    }
+
+    function handleCodeRun(){
+        try{
+            displayError('')
+            state = 'running'
             autoRunCodeStep()
         }catch(e){
             console.error(e)
@@ -410,15 +409,7 @@ const module = (function() {
     function handleCodeCompileAndRunStep(){
         try{
             displayError('')
-            saveCodeToLocalStorage()
             state = 'stepping'
-            const program = getCompiledCodeFromTextArea()
-            engine.loadProgram(program)
-            // engine.executeNextInstruction()
-    
-            if(engine.isHalted){
-                state = 'idle'
-            }
             drawUI()
         }catch(e){
             console.error(e)
@@ -426,153 +417,6 @@ const module = (function() {
             state = 'idle'
             drawUI()
         }
-    }
-
-    function compileCode(codeText){
-        function isLabelInstruction(label){
-            return ['load', 'stor', 'add', 'sub', 'halt', 'jmp', 'jmpc', 'jmpz'].includes(label.toLowerCase())
-        }
-
-        const labels = {}
-
-        var currentMemoryAddress = 0
-        var memoryOffset = 0
-        const memoryInitial = {}
-
-        const lines = codeText.split('\n')
-        const instructions = []
-        for(var lineNumber = 0; lineNumber < lines.length; lineNumber++){
-            var line = lines[lineNumber]
-            line = line
-                .replace(/;.*$/, '') // remove comments
-                .replaceAll(/\t/g, ' ') // replace tabs
-                .replaceAll(/ {2,}/g, ' ') // replace multiple spaces
-                .trim() // remove preceding and succeding spaces
-
-            if(line == ''){
-                // skip empty lines
-                continue
-            }
-
-            const parts = line.split(' ')
-            if(parts.length > 3){
-                throw `too many elements in line ${lineNumber}`
-            }
-
-            var label = undefined
-            var instruction = undefined
-            var argument = undefined
-
-            if(parts.length == 1){
-                const value = parts[0]
-                if(isLabelInstruction(value)){
-                    instruction = parts[0]
-                }else{
-                    label = parts[0]
-                }
-            }else if(parts.length == 3){
-                label = parts[0]
-                instruction = parts[1]
-                argument = parts[2]
-            }else if(parts.length == 2){
-                const lastPart = parts[1]
-                const lastPartIsInstruction = isLabelInstruction(lastPart)
-
-                if(lastPartIsInstruction){
-                    label = parts[0]
-                    instruction = parts[1]
-                }else{
-                    instruction = parts[0]
-                    argument = parts[1]
-                }
-            }
-
-            function parsePossibleNumber(value){
-                const isArgumentNumber = (value.match(/^[0-8]+$/) != null)
-                if(isArgumentNumber){
-                    return parseInt(value, 8)
-                }
-                const isArgumentHexNumber = (value.match(/^0x[0-9a-f]+$/i) != null)
-                if(isArgumentHexNumber){
-                    return parseInt(value.substring(2), 16)
-                }
-
-                return value
-            }
-
-            if(argument != undefined){
-                argument = parsePossibleNumber(argument)
-            }
-
-            if(instruction != undefined){
-                instruction = instruction.toLowerCase()
-            }
-
-            if(instruction == 'org'){
-                memoryOffset = argument
-                continue
-            }
-
-            if(label != undefined){
-                if(instruction == 'db'){
-                    labels[label] = currentMemoryAddress
-                    currentMemoryAddress++
-                    memoryInitial[label] = argument
-                    continue
-                }else{
-                    labels[label] = instructions.length
-                }
-            }
-
-            if(instruction != undefined){
-                instructions.push(
-                    new NerdiInstruction(
-                        instruction,
-                        argument,
-                        label,
-                        instructions.length,
-                        lineNumber
-                    )
-                )
-            }
-        }
-
-        const instructionOpCodes = [
-            'halt',
-            'load',
-            'stor',
-            'add',
-            'sub',
-            'jmp',
-            'jmpc',
-            'jmpz'
-        ]
-        for(instruction of instructions){
-            if(instruction.instruction == 'db'){
-                continue
-            }
-
-            const indexOfInstruction = instructionOpCodes.indexOf(instruction.instruction)
-            if(indexOfInstruction == -1){
-                throw `Instruction ${instruction.instruction} unknown in line ${instruction.lineNumber + 1}`
-            }
-            instruction.instructionByte = indexOfInstruction << 5
-            if(instruction.argument != undefined){
-                if(instruction.instruction.startsWith('jmp')){
-                    // pointing to code part
-                    const labelAddress = labels[instruction.argument]
-                    instruction.instructionByte |= labelAddress
-                }else if(instruction.argument != undefined){
-                    // pointing to memory
-                    const memoryAddress = labels[instruction.argument]
-                    if(memoryAddress != undefined){
-                        instruction.instructionByte |= (memoryAddress + memoryOffset)
-                    }
-                }
-            }
-        }
-
-        return new NerdiProgram(instructions, memoryOffset, memoryInitial, labels)
     }
 
     return {
