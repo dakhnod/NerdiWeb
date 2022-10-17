@@ -14,19 +14,25 @@
         integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
 
     <style>
+        div.segment {
+            margin: 15px;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: rgba(0, 0, 0, 0.3);
+            border-style: solid;
+            padding: 15px;
+        }
         div.control-container {
             gap: 10px;
+            margin: 15px;
         }
         div.engine-display {
             gap: 30px;
             margin: 15px;
         }
         div.engine-box {
-            border-style: solid;
             padding: 5px;
-            border-radius: 10px;
-            border-width: 1px;
-            border-color: rgba(0, 0, 0, 0.3);
+            margin: 0px;
         }
         mark.code-line {
             background-color: #007bff60;
@@ -70,7 +76,8 @@
 
 <body>
 
-    <textarea id="code-text-edit" class="form-control textarea-auto-scale" style="min-height: 200px">
+    <div class="segment">
+        <textarea id="code-text-edit" class="form-control textarea-auto-scale" style="min-height: 200px">
 
         ; Addition der Zahlen von 1 bis 10
         START
@@ -93,13 +100,14 @@
         sum   DB 00      ; Ergebnis
             END
     
-    </textarea>
+        </textarea>
 
-    <span id="text-error" class="text-danger"></span>
+        <span id="text-error" class="text-danger"></span>
+    
+        <span id="code-text-readonly" class="code-readonly"></span>
+    </div>
 
-    <span id="code-text-readonly" class="code-readonly"></span>
-
-    <div class="d-flex control-container flex-wrap">
+    <div class="d-flex segment control-container flex-wrap">
         <div class="btn-group">
             <button id="button-run-code" class="btn btn-primary button-flow-control">Run code</button>
             <div class="dropdown" id="select-step-period">
@@ -121,16 +129,16 @@
         <button id="button-code-stop" class="btn btn-primary button-flow-control">Stop execution</button>
     </div>
 
-    <div class="d-flex flex-wrap engine-display">
-        <div class="engine-box">
+    <div class="d-flex segment flex-wrap engine-display">
+        <div class="segment engine-box">
             <span class="memory-label">Registers</span>
             <div id="memory-registers" class=""></div>
         </div>
-        <div class="engine-box">
+        <div class="segment engine-box">
             <span class="memory-label">Variables</span>
             <div id="memory-variables" class=""></div>
         </div>
-        <div class="engine-box">
+        <div class="segment engine-box">
             <span class="memory-label">Memory</span>
             <div id="memory-map"></div>
         </div>
