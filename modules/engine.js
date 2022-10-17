@@ -147,12 +147,24 @@ export class NerdiEngine{
         this.dataCells = []
         this.codeCells = []
 
+        const self = this
+
         function getDataCellByAddress(address){
             return this.dataCells.find(cell => cell.address == address)
         }
 
         function getCodeCellByAddress(address){
             return this.codeCells.find(cell => cell.address == address)
+        }
+
+        function getCellPoolForInstruction(instruction){
+            if(instruction == 'halt'){
+                return undefined
+            }
+            if(instruction.startsWith('jmp')){
+                return self.codeCells
+            }
+            return self.dataCells
         }
 
         for(const byte of this.memory){
@@ -175,30 +187,83 @@ export class NerdiEngine{
                 break
             }
 
-            const cellPool = function(){
-                if(instruction.startsWith('jmp')){
-                    return this.codeCells
+            const cellPool = getCellPoolForInstruction(instruction)
+
+            if(cellPool != undefined){
+                const existingCell = cellPool.find(cell => cell.address == argumentAddress)
+
+                if(existingCell == undefined){
+                    cellPool.push(new NerdiDataCell(
+                        argumentAddress,
+                        `ADDRESS_${argumentAddress}`,
+                        this.memory[argumentAddress]
+                    ))
                 }
-                return this.dataCells
-            }()
-
-            const existingCell = cellPool.find(cell => cell.address == argumentAddress)
-
-            if(existingCell == undefined){
-                cellPool.push(new NerdiDataCell(
-                    argumentAddress,
-                    `ADDRESS_${argumentAddress}`,
-                    argumentAddress
-                ))
             }
 
             this.instructions.push(new NerdiInstruction(
                 instruction,
                 argumentAddress,
                 undefined,
-                instruc.length,
+                this.instructions.length,
                 this.instructions.length
             ))
+        }
+
+        // cut out instruction starting from duplicate halt
+        for(var i = 0; i < (this.instructions.length - 1); i++){
+            if(this.instructions[i].instruction == 'halt' && this.instructions[i + 1].instruction == 'halt'){
+                this.instructions.splice(i + 1)
+                break
+            }
+        }
+
+        // cut out instructions that target an address out of bounds
+        for(var i = 0; i < this.instructions.length; i++){
+            const instruction = this.instructions[i]
+            const jumpTargetIsOutsideOfBounds = function(){
+                if(instruction.instruction == 'halt'){
+                    return false
+                }
+                const targetAddress = instruction.argument
+                if(instruction.instruction.startsWith('jmp')){
+                    if(targetAddress >= self.instructions.length){
+                        return true
+                    }
+                    return false
+                }
+
+                if(targetAddress < self.instructions.length){
+                    return true
+                }
+
+                const dataAddresses = self.dataCells.map(cell => cell.address)
+                const memoryLimit = Math.max(...dataAddresses)
+                if(targetAddress > memoryLimit){
+                    return true
+                }
+
+                return false
+            }()
+
+            if(jumpTargetIsOutsideOfBounds){
+                self.instructions.splice(i + 1)
+                break
+            }
+        }
+
+        for(const instruction of this.instructions){
+            const cellPool = getCellPoolForInstruction(instruction.instruction)
+            if(cellPool == undefined){
+                continue
+            }
+            const cell = cellPool.find(cell => cell.address == instruction.argument)
+
+            if(cell == undefined){
+                continue
+            }
+
+            instruction.argument = cell.label
         }
     }
 

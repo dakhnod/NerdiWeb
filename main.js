@@ -116,9 +116,27 @@ const module = (function() {
     }
 
     function displayCode(){
-        const codeText = textCodeEdit.val()
+        const self = this
+        const lines = function(){
+            if(false){
+                const codeText = textCodeEdit.val()
+                return codeText.split('\n')
+            }
+
+            return engine.instructions.map(function(instruction){
+                var line = ''
+                if(instruction.label != undefined){
+                    line += `${instruction.label} `
+                }
+                line += `${instruction.instruction} `
+                if(instruction.argument != undefined){
+                    line += instruction.argument
+                }
+                return line
+            })
+        }()
+
         var codeTextReadOnly = ''
-        const lines = codeText.split('\n')
         const currentInstruction = engine.getCurrentInstruction()
         for(var currentLine = 0; currentLine < lines.length; currentLine++){
             const line = lines[currentLine]
@@ -384,6 +402,8 @@ const module = (function() {
             saveCodeToLocalStorage()
             const program = getCompiledCodeFromTextArea()
             engine.loadProgram(program)
+
+            engine.disassembleMemory()
 
             drawUI()
         }catch(e){
