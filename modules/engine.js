@@ -142,6 +142,65 @@ export class NerdiEngine{
         this.executeInstruction(nextInstructionByte)
     }
 
+    disassembleMemory(){
+        this.instructions = []
+        this.dataCells = []
+        this.codeCells = []
+
+        function getDataCellByAddress(address){
+            return this.dataCells.find(cell => cell.address == address)
+        }
+
+        function getCodeCellByAddress(address){
+            return this.codeCells.find(cell => cell.address == address)
+        }
+
+        for(const byte of this.memory){
+            const opCode = byte >> 5
+            const argumentAddress = byte & 0b00011111
+
+            const instructionOpCodes = [
+                'halt',
+                'load',
+                'stor',
+                'add',
+                'sub',
+                'jmp',
+                'jmpc',
+                'jmpz'
+            ]
+
+            const instruction = instructionOpCodes[opCode]
+            if(instruction == undefined){
+                break
+            }
+
+            const cellPool = function(){
+                if(instruction.startsWith('jmp')){
+                    return this.codeCells
+                }
+                return this.dataCells
+            }()
+
+            const existingCell = cellPool.find(cell => cell.address == argumentAddress)
+
+            if(existingCell == undefined){
+                cellPool.push(new NerdiDataCell(
+                    argumentAddress,
+                    `ADDRESS_${argumentAddress}`,
+                    argumentAddress
+                ))
+            }
+
+            this.instructions.push(new NerdiInstruction(
+                instruction,
+                argumentAddress,
+                undefined,
+                instruc.length,
+                this.instructions.length
+            ))
+        }
+    }
 
     compileCode = function(codeText){
         function isLabelInstruction(label){

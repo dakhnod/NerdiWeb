@@ -299,7 +299,8 @@ const module = (function() {
 
         for(const dataCell of dataCells){
             const spanNode = $('<span>')
-            spanNode.text(`${dataCell.label}: 0x${dataCell.value.toString(16)}`)
+            const value = engine.memory[dataCell.address]
+            spanNode.text(`${dataCell.label}: 0x${value.toString(16)}`)
             spanNode.addClass('d-block')
             if(currentArgument != undefined && dataCell.label == currentArgument){
                 spanNode.addClass('memory-current-argument')
