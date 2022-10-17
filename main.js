@@ -30,9 +30,17 @@ const module = (function() {
 
         $('.select-step-period').click(handleStepPeriodSelect)
 
+        $('.textarea-auto-scale').each(function(){
+            this.setAttribute('style', `height: ${this.scrollHeight}px;`)
+        }).on('input', function(){
+            this.style.height = 0
+            this.style.height = `${this.scrollHeight}px`
+        })
+
         const savedCode = localStorage.getItem('code_last')
         if(savedCode != undefined){
             textCodeEdit.val(savedCode)
+            textCodeEdit.trigger('input')
         }
 
         drawUI()
@@ -40,7 +48,6 @@ const module = (function() {
 
     function handleStepPeriodSelect(event){
         const period = Number(event.currentTarget.dataset['period'])
-        console.log(period)
         stepPeriod = period
         codeStepPeriodSelectButton.text(`${stepPeriod / 1000}s`)
     }
@@ -194,8 +201,6 @@ const module = (function() {
 
         divMemoryMap.empty()
         divMemoryMap.append(tableNode)
-
-        console.log()
     }
 
     function displayRegisters(){
