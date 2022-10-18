@@ -150,11 +150,11 @@ export class NerdiEngine{
         const self = this
 
         function getDataCellByAddress(address){
-            return this.dataCells.find(cell => cell.address == address)
+            return self.dataCells.find(cell => cell.address == address)
         }
 
         function getCodeCellByAddress(address){
-            return this.codeCells.find(cell => cell.address == address)
+            return self.codeCells.find(cell => cell.address == address)
         }
 
         function getCellPoolForInstruction(instruction){
@@ -169,7 +169,7 @@ export class NerdiEngine{
 
         for(const byte of this.memory){
             const opCode = byte >> 5
-            const argumentAddress = byte & 0b00011111
+            var argumentAddress = byte & 0b00011111
 
             const instructionOpCodes = [
                 'halt',
@@ -199,6 +199,10 @@ export class NerdiEngine{
                         this.memory[argumentAddress]
                     ))
                 }
+            }
+
+            if(instruction == 'halt'){
+                argumentAddress = undefined
             }
 
             this.instructions.push(new NerdiInstruction(
@@ -257,13 +261,17 @@ export class NerdiEngine{
             if(cellPool == undefined){
                 continue
             }
-            const cell = cellPool.find(cell => cell.address == instruction.argument)
-
-            if(cell == undefined){
-                continue
+            const argumentCell = cellPool.find(cell => cell.address == instruction.argument)
+            if(argumentCell != undefined){
+                instruction.argument = argumentCell.label
             }
+        }
 
-            instruction.argument = cell.label
+        for(const instruction of this.instructions){
+            const instructionCell = getCodeCellByAddress(instruction.address)
+            if(instructionCell != undefined){
+                instruction.label = instructionCell.label
+            }
         }
     }
 

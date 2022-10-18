@@ -118,17 +118,18 @@ const module = (function() {
     function displayCode(){
         const self = this
         const lines = function(){
-            if(false){
+            if(true){
                 const codeText = textCodeEdit.val()
                 return codeText.split('\n')
             }
 
             return engine.instructions.map(function(instruction){
-                var line = ''
+                var line = '           '
                 if(instruction.label != undefined){
-                    line += `${instruction.label} `
+                    const label = instruction.label
+                    line = `${label}${line.substring(label.length)}`
                 }
-                line += `${instruction.instruction} `
+                line += `${instruction.instruction.toUpperCase()} `
                 if(instruction.argument != undefined){
                     line += instruction.argument
                 }
@@ -402,8 +403,6 @@ const module = (function() {
             saveCodeToLocalStorage()
             const program = getCompiledCodeFromTextArea()
             engine.loadProgram(program)
-
-            engine.disassembleMemory()
 
             drawUI()
         }catch(e){
