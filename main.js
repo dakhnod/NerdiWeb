@@ -437,7 +437,7 @@ const module = (function() {
             saveCodeToLocalStorage()
             const program = getCompiledCodeFromTextArea()
             engine.loadProgram(program)
-            this.displayDisassembledCode = false
+            displayDisassembledCode = false
 
             drawUI()
         }catch(e){
