@@ -289,16 +289,17 @@ const module = (function() {
 
             const edit = $('<input>')
             edit.addClass('register-number')
-            edit.prop('type', 'number')
+            // edit.prop('type', 'number')
 
             if(state != 'stepping'){
                 edit.prop('disabled', true)
             }
 
-            edit.val(engine.registers[key])
+            edit.val(engine.registers[key].toString(16))
 
             edit.change(function(event){
-                engine.registers[key] = event.currentTarget.value
+                engine.registers[key] = parseInt(event.currentTarget.value, 16)
+                drawUI()
             })
             
 
