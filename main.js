@@ -21,6 +21,8 @@ const module = (function() {
 
     var stepPeriod = 1000
 
+    var displayDisassembledCode = true
+
     function init(){
         compileCodeButton.click(handleCodeCompile)
         runCodeButton.click(handleCodeRun)
@@ -29,6 +31,8 @@ const module = (function() {
         codeStepForwardButton.click(handleCodeStepForward)
         codePauseButton.click(handleCodePause)
         codeStopButton.click(handleCodeStop)
+
+        engine.disassembleMemory()
 
         $('.select-step-period').click(handleStepPeriodSelect)
 
@@ -118,7 +122,7 @@ const module = (function() {
     function displayCode(){
         const self = this
         const lines = function(){
-            if(true){
+            if(!displayDisassembledCode){
                 const codeText = textCodeEdit.val()
                 return codeText.split('\n')
             }
@@ -188,6 +192,36 @@ const module = (function() {
                 const byte = totalBytes[offsetIndex]
                 const columnNode = $('<td>')
                 columnNode.addClass('memory-cell')
+                columnNode.click(event => {
+                    columnNode.unbind('click')
+                    const edit = $('<input>')
+                    edit.type = 'text'
+                    edit.addClass('memory-cell-edit')
+                    edit.val(byte.toString(16))
+                    columnNode.html(edit)
+                    edit.change(event => {
+                        try{
+                            const value = event.currentTarget.value
+                            if(value == ''){
+                                throw 'Value cannot be empty'
+                            }
+                            const valueInt = Number.parseInt(value, 16)
+                            if(valueInt > 0xff){
+                                throw 'Value cannot be larget than 0xff'
+                            }
+                            if(valueInt < 0x00){
+                                throw 'Value cannot be smaller than 0x00'
+                            }
+                            engine.memory[offsetIndex] = valueInt
+                            engine.disassembleMemory()
+                            displayDisassembledCode = true
+                            displayError('')
+                            drawUI()
+                        }catch(e){
+                            displayError(e)
+                        }
+                    })
+                })
                 var text = byte.toString(16)
                 if(byte < 16){
                     text = `0${text}`
@@ -403,6 +437,7 @@ const module = (function() {
             saveCodeToLocalStorage()
             const program = getCompiledCodeFromTextArea()
             engine.loadProgram(program)
+            this.displayDisassembledCode = false
 
             drawUI()
         }catch(e){
