@@ -10,6 +10,9 @@ const module = (function() {
     const codePauseButton = $('#button-code-pause')
     const codeStopButton = $('#button-code-stop')
     const codeStepPeriodSelectButton = $('#select-label-step-period')
+    const codeRegistersResetButton = $('#button-registers-reset')
+    const codeVariablesResetButton = $('#button-variables-reset')
+    const codeMemoryResetButton = $('#button-memory-reset')
     const divRegisters = $('#memory-registers')
     const divVariables = $('#memory-variables')
     const textCodeEdit = $('#code-text-edit')
@@ -31,6 +34,9 @@ const module = (function() {
         codeStepForwardButton.click(handleCodeStepForward)
         codePauseButton.click(handleCodePause)
         codeStopButton.click(handleCodeStop)
+        codeRegistersResetButton.click(handleRegistersReset)
+        codeVariablesResetButton.click(handleVariablesReset)
+        codeMemoryResetButton.click(handleMemoryReset)
 
         engine.disassembleMemory()
 
@@ -49,6 +55,21 @@ const module = (function() {
             textCodeEdit.trigger('input')
         }
 
+        drawUI()
+    }
+
+    function handleMemoryReset(){
+        engine.resetMemory()
+        drawUI()
+    }
+
+    function handleRegistersReset(){
+        engine.resetRegisters()
+        drawUI()
+    }
+
+    function handleVariablesReset(){
+        engine.resetVariables()
         drawUI()
     }
 
@@ -71,7 +92,8 @@ const module = (function() {
                 compileCodeButton,
                 runCodeButton,
                 runCodeStepButton,
-                codeStepPeriodSelectButton
+                codeStepPeriodSelectButton,
+                codeMemoryResetButton
             ],
             'running': [
                 codePauseButton,
@@ -81,7 +103,10 @@ const module = (function() {
                 runCodeButton,
                 codeStepForwardButton,
                 codeStopButton,
-                codeStepPeriodSelectButton
+                codeStepPeriodSelectButton,
+                codeRegistersResetButton,
+                codeVariablesResetButton,
+                codeMemoryResetButton
             ]
         }
 
@@ -94,8 +119,9 @@ const module = (function() {
             activeButton.prop('disabled', false)
         }
 
-        if(state == 'stepping' && engine.snapshots.length > 0){
-            codeStepBackwardButton.prop('disabled', false)
+        if(state == 'stepping'){
+            codeStepBackwardButton.prop('disabled', engine.snapshots.length == 0)
+            codeVariablesResetButton.prop('disabled', engine.snapshots.length == 0)
         }
 
         if(state == 'idle'){
@@ -452,6 +478,7 @@ const module = (function() {
         try{
             displayError('')
             state = 'running'
+            engine.resetRegisters()
             autoRunCodeStep()
         }catch(e){
             console.error(e)
@@ -465,6 +492,7 @@ const module = (function() {
         try{
             displayError('')
             state = 'stepping'
+            engine.resetRegisters()
             drawUI()
         }catch(e){
             console.error(e)

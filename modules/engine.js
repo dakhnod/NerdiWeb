@@ -9,15 +9,36 @@ export class NerdiEngine{
 
     memory = new Array(32)
 
+    registers = undefined
+
     constructor(){
         this.clearMemory()
+        this.resetRegisters()
     }
 
-    registers = {
-        programCounter: 0,
-        accumulator: 0,
-        carry: false,
-        zero: false
+    resetRegisters = function(){
+        this.registers = {
+            programCounter: 0,
+            accumulator: 0,
+            carry: false,
+            zero: false
+        }
+        this.snapshots = []
+    }
+
+    resetVariables = function(){
+        if(this.snapshots.length > 0){
+            const firstSnapshot = this.snapshots[0]
+            this.memory = firstSnapshot.memory
+        }
+        this.resetRegisters()
+    }
+
+    resetMemory = function(){
+        this.memory = Array(32)
+        this.memory.fill(0x00)
+
+        this.resetRegisters()
     }
 
     loadProgram = function(program) {
@@ -132,6 +153,7 @@ export class NerdiEngine{
         if(callback == undefined){
             throw `Instruction ${instruction.instruction} not found`
         }
+        this.isHalted = false
         callback.call(this, argument)
     }
 
@@ -195,7 +217,7 @@ export class NerdiEngine{
                 if(existingCell == undefined){
                     cellPool.push(new NerdiDataCell(
                         argumentAddress,
-                        `ADDRESS_${argumentAddress}`,
+                        `ADDRESS_${argumentAddress.toString(16)}`,
                         this.memory[argumentAddress]
                     ))
                 }
@@ -205,13 +227,17 @@ export class NerdiEngine{
                 argumentAddress = undefined
             }
 
-            this.instructions.push(new NerdiInstruction(
+            const instructionObject = new NerdiInstruction(
                 instruction,
                 argumentAddress,
                 undefined,
                 this.instructions.length,
                 this.instructions.length
-            ))
+            )
+            
+            instructionObject.instructionByte = byte
+
+            this.instructions.push(instructionObject)
         }
 
         // cut out instruction starting from duplicate halt
