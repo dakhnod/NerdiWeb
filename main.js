@@ -76,6 +76,10 @@ const module = (function() {
     function handleStepPeriodSelect(event){
         const period = Number(event.currentTarget.dataset['period'])
         stepPeriod = period
+        if(period == 0){
+            codeStepPeriodSelectButton.text(`instant`)
+            return
+        }
         codeStepPeriodSelectButton.text(`${stepPeriod / 1000}s`)
     }
 
@@ -480,7 +484,25 @@ const module = (function() {
             displayError('')
             state = 'running'
             engine.resetRegisters()
-            autoRunCodeStep()
+            if(stepPeriod > 0){
+                // handle delayed execution
+                autoRunCodeStep()
+                return
+            }
+            const instructionsLimit = 1000
+            var currentInstruction = 0
+            while (true){
+                engine.executeNextInstruction()
+                if(engine.isHalted){
+                    state = 'idle'
+                    break
+                }
+                if(currentInstruction > instructionsLimit){
+                    throw 'Reached limit of 1000 instructions. Possible infinite loop detected.'
+                }
+                currentInstruction++
+            }
+            drawUI()
         }catch(e){
             console.error(e)
             displayError(e)
