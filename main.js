@@ -47,6 +47,7 @@ const module = (function() {
         $('.textarea-auto-scale').each(function(){
             this.setAttribute('style', `height: ${this.scrollHeight}px;`)
         }).on('input', function(){
+            return
             this.style.height = 0
             this.style.height = `${this.scrollHeight}px`
         }).on('keydown', function(event){
