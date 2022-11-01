@@ -253,13 +253,17 @@ const module = (function() {
                             if(value == ''){
                                 throw 'Value cannot be empty'
                             }
-                            const valueInt = Number.parseInt(value, 16)
+                            var valueInt = Number.parseInt(value, 16)
+                            /*
                             if(valueInt > 0xff){
                                 throw 'Value cannot be larget than 0xff'
                             }
                             if(valueInt < 0x00){
                                 throw 'Value cannot be smaller than 0x00'
                             }
+                            */
+                            valueInt = Math.min(valueInt, 0xff)
+                            valueInt = Math.max(valueInt, 0x00)
                             engine.memory[offsetIndex] = valueInt
                             engine.disassembleMemory()
                             displayDisassembledCode = true
