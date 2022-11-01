@@ -26,6 +26,8 @@ const module = (function() {
 
     var displayDisassembledCode = true
 
+    var cellBoxes = []
+
     function init(){
         compileCodeButton.click(handleCodeCompile)
         runCodeButton.click(handleCodeRun)
@@ -216,6 +218,8 @@ const module = (function() {
 
         const tableNode = $('<table>')
 
+        cellBoxes = []
+
         for(var currentRow = 0; currentRow < rowCount; currentRow++){
             const rowNode = $('<tr>')
 
@@ -250,10 +254,11 @@ const module = (function() {
                     edit.change(event => {
                         try{
                             const value = event.currentTarget.value
-                            if(value == ''){
-                                throw 'Value cannot be empty'
-                            }
                             var valueInt = Number.parseInt(value, 16)
+                            if(value == ''){
+                                // throw 'Value cannot be empty'
+                                valueInt = 0
+                            }
                             /*
                             if(valueInt > 0xff){
                                 throw 'Value cannot be larget than 0xff'
@@ -272,7 +277,21 @@ const module = (function() {
                         }catch(e){
                             displayError(e)
                         }
+                    }).on('keydown', function(event){
+                        if(event.key != 'Tab'){
+                            return
+                        }
+                        event.preventDefault()
+                        $(this).change()
+                        const nextNode = cellBoxes[offsetIndex + 1]
+                        if(nextNode == undefined){
+                            console.error('pressed tab in last box')
+                            return
+                        }
+                        nextNode.click()
                     })
+                    edit.focus()
+                    edit.select()
                 })
                 var text = byte.toString(16)
                 if(byte < 16){
@@ -287,6 +306,7 @@ const module = (function() {
                     columnNode.addClass('memory-current-argument')
                 }
                 rowNode.append(columnNode)
+                cellBoxes.push(columnNode)
             }
 
             tableNode.append(rowNode)
