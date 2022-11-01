@@ -440,6 +440,10 @@ export class NerdiEngine{
             instruction.instructionByte = indexOfInstruction << 5
             if(instruction.argument != undefined){
                 var referedCell = function(){
+                    if(typeof(instruction.argument) == 'number'){
+                        return new NerdiDataCell(instruction.argument)
+                    }
+
                     if(instruction.instruction.startsWith('jmp')){
                         return getCodeCellByLabel(instruction.argument)
                     }else{

@@ -158,14 +158,18 @@ const module = (function() {
             }
 
             return engine.instructions.map(function(instruction){
-                var line = '           '
+                var line = ''
+                // removing in favour of addresses
+                /*
                 if(instruction.label != undefined){
                     const label = instruction.label
                     line = `${label}${line.substring(label.length)}`
                 }
+                */
                 line += `${instruction.instruction.toUpperCase()} `
-                if(instruction.argument != undefined){
-                    line += instruction.argument
+                const targetAddress = instruction.getTargetAddress()
+                if(targetAddress != undefined){
+                    line += `0x${targetAddress.toString(16)}`
                 }
                 return line
             })
