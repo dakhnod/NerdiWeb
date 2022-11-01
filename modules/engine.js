@@ -488,7 +488,7 @@ export class NerdiInstruction{
     }
 
     getTargetAddress = function(){
-        if(!['load', 'stor', 'jmp', 'jmpc', 'jmpz'].includes(this.instruction)){
+        if(!['load', 'stor', 'jmp', 'jmpc', 'jmpz', 'add', 'sub'].includes(this.instruction)){
             return undefined
         }
         return this.instructionByte & 0b00011111
