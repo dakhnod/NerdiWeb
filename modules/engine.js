@@ -390,6 +390,10 @@ export class NerdiEngine{
                     throw `label "${label}" contains non alpha-numeric characters in line ${lineNumber}`
                 }
                 if(instruction == 'db'){
+                    const sameNameCells = dataCells.find(cell => cell.label == label)
+                    if(sameNameCells != undefined){
+                        throw `Variable name "${label}" duplicate in line ${lineNumber}`
+                    }
                     dataCells.push(new NerdiDataCell(dataCells.length, label, argument))
                     continue
                 }else{
