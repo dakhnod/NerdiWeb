@@ -385,6 +385,10 @@ export class NerdiEngine{
             }
 
             if(label != undefined){
+                const nonAlphaCharsMatch = label.match(/[^a-z0-9_]/i)
+                if(nonAlphaCharsMatch != null){
+                    throw `label "${label}" contains non alpha-numeric characters in line ${lineNumber}`
+                }
                 if(instruction == 'db'){
                     dataCells.push(new NerdiDataCell(dataCells.length, label, argument))
                     continue
