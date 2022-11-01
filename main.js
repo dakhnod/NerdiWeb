@@ -47,6 +47,20 @@ const module = (function() {
         }).on('input', function(){
             this.style.height = 0
             this.style.height = `${this.scrollHeight}px`
+        }).on('keydown', function(event){
+            console.log(event)
+            if (event.key == 'Tab') {
+                event.preventDefault();
+                var start = this.selectionStart;
+                var end = this.selectionEnd;
+            
+                // set textarea value to: text before caret + tab + text after caret
+                this.value = this.value.substring(0, start) +
+                  "\t" + this.value.substring(end);
+            
+                // put caret at right position again
+                this.selectionStart = this.selectionEnd = start + 1;
+            }
         })
 
         const savedCode = localStorage.getItem('code_last')
