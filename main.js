@@ -72,6 +72,39 @@ const module = (function() {
             textCodeEdit.trigger('input')
         }
 
+        $('#input-file-read').change(function(event){
+            try{
+                const file = this.files[0]
+                const name = file.name.toLowerCase()
+                if(!name.endsWith('.txt') && !name.endsWith('.nerdi')){
+                    throw 'File must end with .txt or .nerdi'
+                }
+
+                const reader = new FileReader()
+                reader.addEventListener('load', function(event){
+                    const text = this.result
+                    textCodeEdit.val(text)
+                })
+                reader.readAsText(file)
+            }catch(e){
+                displayError(e)
+            }
+            this.value = ''
+        })
+
+        $('#input-file-write').click(function(event){
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(textCodeEdit.val()));
+            element.setAttribute('download', 'nerdi.txt');
+          
+            element.style.display = 'none';
+            document.body.appendChild(element);
+          
+            element.click();
+          
+            document.body.removeChild(element);
+        })
+
         drawUI()
     }
 
