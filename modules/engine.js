@@ -394,7 +394,8 @@ export class NerdiEngine{
                     if(sameNameCells != undefined){
                         throw `Variable name "${label}" duplicate in line ${lineNumber}`
                     }
-                    dataCells.push(new NerdiDataCell(dataCells.length, label, argument))
+                    dataCells.push(new NerdiDataCell(memoryOffset, label, argument))
+                    memoryOffset++
                     continue
                 }else{
                     codeCells.push(new NerdiDataCell(instructions.length, label, argument))
@@ -434,10 +435,6 @@ export class NerdiEngine{
 
         function getDataCellByLabel(label){
             return dataCells.find(dataCell => dataCell.label == label)
-        }
-
-        for(const dataCell of dataCells){
-            dataCell.address += memoryOffset
         }
 
         for(const instruction of instructions){
