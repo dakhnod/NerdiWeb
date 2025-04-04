@@ -70,7 +70,7 @@ export class NerdiEngine{
 
     executeAddInstruction = function(argumentAddress){
         const argumentValue = this.getVariableFromMemory(argumentAddress)
-        const result = argumentValue + this.registers.accumulator
+        const result = this.registers.accumulator + argumentValue
 
         this.registers.carry = result > 255
         this.registers.accumulator = result % 256
@@ -79,7 +79,7 @@ export class NerdiEngine{
 
     executeSubInstruction = function(argumentAddress){
         const argumentValue = this.getVariableFromMemory(argumentAddress)
-        var result = argumentValue - this.registers.accumulator
+        var result = this.registers.accumulator - argumentValue
 
         this.registers.carry = result < 0
         while(result < 0){
